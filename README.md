@@ -26,7 +26,7 @@ e.g. You have `a@gmail.com` and `b@gmail.com`
 
 **IT IS REQUIRED TO EXECUTE SCRIPT ON BOTH ACCOUNTS TO SYNC EVENTS.**
 
-### Set up script properties
+### Set up variables
 
 To execute the GAS, please configure three variables.
 
