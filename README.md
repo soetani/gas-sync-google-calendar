@@ -28,12 +28,10 @@ e.g. You have `a@gmail.com` and `b@gmail.com`
 
 ### Set up script properties
 
-To execute the GAS, please configure script properties.
+To execute the GAS, please configure three variables.
 
-`File > Project properties > Script properties`
-
-- `DAYS_TO_CHECK`: To sync events 30 days from now, please set 30.
-- `EMAIL_TO_INVITE`: This email address will be invited to the events.
+- `DAYS_TO_SYNC`: To sync events 30 days from now, please set 30.
+- `CALENDAR_IDS`: Email address mapping of source calendar ID and guest calendar ID
 - `SLACK_WEBHOOK_URL`: There is something wrong, error will be notified to this Slack channel.
 
 ### Set up trigger
