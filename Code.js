@@ -1,44 +1,50 @@
 // README
-// Please set script properties: DAYS_TO_CHECK, EMAIL_TO_INVITE, SLACK_WEBHOOK_URL
-// File > Project properties > Script properties
-var scriptProperties = PropertiesService.getScriptProperties();
-var DAYS_TO_CHECK = scriptProperties.getProperty('DAYS_TO_CHECK'); // 30
-var EMAIL_TO_INVITE = scriptProperties.getProperty('EMAIL_TO_INVITE'); // example@example.com
-var SLACK_WEBHOOK_URL = scriptProperties.getProperty('SLACK_WEBHOOK_URL'); // https://example.com/slack_incoming_webhook;
+// Instruction: https://github.com/soetani/gas-sync-google-calendar
+// 1. How many days do you want to sync your calendars?
+var DAYS_TO_SYNC = 30;
+// 2. Calendar ID mapping: [Calendar ID (Source), Calendar ID (Guest)]
+var CALENDAR_IDS = [
+  ['source_01@example.com', 'guest_01@example.net'],
+  ['source_02@example.com', 'guest_02@example.net']
+];
+// 3. What is Slack webhook URL? You'll be notified when the sync is failed
+var SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/foobar';
 
 function main(){
-  validateScriptProperties();
-  var from = new Date();
-  var to = new Date(from.getTime() + (DAYS_TO_CHECK * 24 * 60 * 60* 1000));
-  var events = CalendarApp.getDefaultCalendar().getEvents(from, to);
-  events.forEach(function(event){
-    var guest = event.getGuestByEmail(EMAIL_TO_INVITE);
-    guest ? syncStatus(event, guest) : invite(event);
+  var dateFrom = new Date();
+  var dateTo = new Date(dateFrom.getTime() + (DAYS_TO_SYNC * 24 * 60 * 60* 1000));
+  
+  CALENDAR_IDS.forEach(function(ids){
+    var sourceId = ids[0];
+    var guestId = ids[1];
+    Logger.log('Source: ' + sourceId + ' / Guest: ' + guestId);
+    
+    var events = CalendarApp.getCalendarById(sourceId).getEvents(dateFrom, dateTo);
+    events.forEach(function(event){
+      var guest = event.getGuestByEmail(guestId);
+      guest ? syncStatus(event, guest) : invite(event, guestId);
+    });
   });
 }
 
-function validateScriptProperties(){
-  if(DAYS_TO_CHECK && EMAIL_TO_INVITE && SLACK_WEBHOOK_URL) return;
-  throw('Script properties are required: DAYS_TO_CHECK, EMAIL_TO_INVITE, SLACK_WEBHOOK_URL');
-}
-
 function syncStatus(event, guest){
-  var myStatus = event.getMyStatus();
+  var sourceStatus = event.getMyStatus();
   var guestStatus = guest.getGuestStatus();
+  
   if(guestStatus != CalendarApp.GuestStatus.YES && guestStatus != CalendarApp.GuestStatus.NO) return;
-  if((myStatus == CalendarApp.GuestStatus.YES || myStatus == CalendarApp.GuestStatus.NO) && myStatus != guestStatus){
-    // Notify when my status is opposite from guest's status
+  if((sourceStatus == CalendarApp.GuestStatus.YES || sourceStatus == CalendarApp.GuestStatus.NO) && sourceStatus != guestStatus){
+    // Notify when source status is opposite from guest's status
     notify('Failed to sync the status of the event: ' + event.getTitle() + ' (' + event.getStartTime() + ')');
   }
-  else if(myStatus != guestStatus && myStatus != CalendarApp.GuestStatus.OWNER){
+  else if(sourceStatus != guestStatus && sourceStatus != CalendarApp.GuestStatus.OWNER){
     // Update status when my status is invited/maybe AND guest's status is yes/no
     event.setMyStatus(guestStatus);
     Logger.log('Status updated:' + event.getTitle() + ' (' + event.getStartTime() + ')');
   }
 }
 
-function invite(event){
-  event.addGuest(EMAIL_TO_INVITE);
+function invite(event, guestId){
+  event.addGuest(guestId);
   Logger.log('Invited: ' + event.getTitle() + ' (' + event.getStartTime() + ')');
 }
 
