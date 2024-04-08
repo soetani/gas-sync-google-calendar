@@ -44,8 +44,12 @@ function syncStatus(event, guest){
 }
 
 function invite(event, guestId){
-  event.addGuest(guestId);
-  Logger.log('Invited: ' + event.getTitle() + ' (' + event.getStartTime() + ')');
+  try {
+    event.addGuest(guestId);
+    Logger.log('Invited: ' + event.getTitle() + ' (' + event.getStartTime() + ')');
+  } catch (e) {
+    Logger.log('*** Failed to invite guest user >> Event Title: ' + event.getTitle() + ' | Error message:' + e.message);
+  }
 }
 
 function notify(message){
