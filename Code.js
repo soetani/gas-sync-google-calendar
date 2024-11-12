@@ -6,7 +6,7 @@ const HOST_ID = CalendarApp.getDefaultCalendar().getId();
 const GUEST_IDS = ['my-second-account@example.com'];
 // [REQUIRED] Date range to sync calendar. When MIN is -1 and MAX is 30, they mean events from yesterday to 30 days from today will be synced.
 const MIN_SYNC_DATE = getRelativeDate(-1);
-const MAX_SYNC_DATE = getRelativeDate(60);
+const MAX_SYNC_DATE = getRelativeDate(30);
 // [OPTIONAL] Slack Incoming Webhook to notify warnings to Slack channel. If empty, warnings to be notified to your email address
 const SLACK_INCOMING_WEBHOOK = '';
 // [DO NOT UPDATE]
