@@ -1,9 +1,12 @@
 // README https://github.com/soetani/gas-sync-google-calendar
-// [REQUIRED] Email address of the calendar which can be managed by your Google account. 
+// [REQUIRED] Email address of the calendar which can be managed by your Google account.
 //            No modification needed to sync with your default calendar.
 const HOST_ID = CalendarApp.getDefaultCalendar().getId();
-// [REQUIRED] Array of email address(es) to sync with your calendar 
+// [REQUIRED] Array of email address(es) to sync with your calendar
 const GUEST_IDS = ['my-second-account@example.com'];
+if (GUEST_IDS.some(email => /@example\.com$/i.test(email))) {
+  throw new Error('Please set GUEST_IDS to your actual email address. Emails with @example.com are not allowed.');
+}
 // [REQUIRED] Date range to sync calendar. When MIN is -1 and MAX is 30, they mean events from yesterday to 30 days from today will be synced.
 const MIN_SYNC_DATE = getRelativeDate(-1);
 const MAX_SYNC_DATE = getRelativeDate(30);
@@ -16,6 +19,51 @@ function init() {
   ScriptApp.getProjectTriggers().forEach(trigger => ScriptApp.deleteTrigger(trigger));
   fullSync();
   ScriptApp.newTrigger('sync').timeBased().everyMinutes(5).create();
+}
+function oneShotSyncInInit() {
+  const DAYS_LOOKBACK = 60;
+  const MIN_DATE = getRelativeDate(-DAYS_LOOKBACK);
+  const MAX_DATE = getRelativeDate(0);
+
+  const listOpts = {
+    timeMin: MIN_DATE.toISOString(),
+    timeMax: MAX_DATE.toISOString(),
+    singleEvents: true,
+    maxResults: 5000
+  };
+
+  const parentIdSet = new Set();
+
+  let pageToken, events;
+  do {
+    listOpts.pageToken = pageToken;
+    events = Calendar.Events.list(HOST_ID, listOpts);
+
+    if (events.items && events.items.length) {
+      events.items.forEach(ev => {
+        if (ev.recurringEventId) parentIdSet.add(ev.recurringEventId);
+      });
+    }
+    pageToken = events.nextPageToken;
+  } while (pageToken);
+
+  Logger.log(`Number of target parent events: ${parentIdSet.size}`);
+
+  // Fetch parent events and add invitations
+  for (const parentId of parentIdSet) {
+    const parent = Calendar.Events.get(HOST_ID, parentId);
+    if (parent.eventType === 'default' && inviteAttendees(parent)) {
+      Calendar.Events.update(
+        parent,
+        HOST_ID,
+        parent.id,
+        { sendUpdates: 'none' }
+      );
+      Logger.log(`Added invitation: ${parent.summary}`);
+    }
+  }
+
+  Logger.log('oneShotSyncRecentRecurringParents completed');
 }
 
 function fullSync() {
@@ -65,7 +113,9 @@ function syncEvent(event) {
   if (start < MIN_SYNC_DATE || start > MAX_SYNC_DATE) return;
   const attendeesInvited = inviteAttendees(event);
   const responseStatusSynced = syncResponseStatus(event);
-  if (attendeesInvited || responseStatusSynced) Calendar.Events.update(event, HOST_ID, event.id);
+  if (attendeesInvited || responseStatusSynced) {
+    Calendar.Events.update(event, HOST_ID, event.id, { sendUpdates: 'none' });
+  }
 }
 
 // Add attendee(s) to the event when needed. Return true when the event is modified
@@ -76,7 +126,7 @@ function inviteAttendees(event) {
     else event.attendees.push({ email: HOST_ID });
 
     Logger.log(`Inviting attendee(s): ${getSummaryForLog(event)}`);
-    return true; // Event is modified 
+    return true; // Event is modified
   }
 
   const attendeesEmailArray = event.attendees.map(attendees => attendees.email);
