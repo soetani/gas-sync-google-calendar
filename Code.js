@@ -19,7 +19,9 @@ function init() {
   ScriptApp.getProjectTriggers().forEach(trigger => ScriptApp.deleteTrigger(trigger));
   fullSync();
   ScriptApp.newTrigger('sync').timeBased().everyMinutes(5).create();
+  oneShotSyncInInit();
 }
+
 function oneShotSyncInInit() {
   const DAYS_LOOKBACK = 60;
   const MIN_DATE = getRelativeDate(-DAYS_LOOKBACK);
@@ -51,15 +53,19 @@ function oneShotSyncInInit() {
 
   // Fetch parent events and add invitations
   for (const parentId of parentIdSet) {
-    const parent = Calendar.Events.get(HOST_ID, parentId);
-    if (parent.eventType === 'default' && inviteAttendees(parent)) {
-      Calendar.Events.update(
-        parent,
-        HOST_ID,
-        parent.id,
-        { sendUpdates: 'none' }
-      );
-      Logger.log(`Added invitation: ${parent.summary}`);
+    try {
+      const parent = Calendar.Events.get(HOST_ID, parentId);
+      if (parent.eventType === 'default' && inviteAttendees(parent)) {
+        Calendar.Events.update(
+          parent,
+          HOST_ID,
+          parent.id,
+          { sendUpdates: 'none' }
+        );
+        Logger.log(`Added invitation: ${parent.summary}`);
+      }
+    } catch (e) {
+      Logger.log(`Failed to get and update event (id: ${parentId}): ${e.message}`)
     }
   }
 
