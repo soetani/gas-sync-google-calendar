@@ -38,7 +38,7 @@ function sync() {
       options.pageToken = pageToken;
       events = Calendar.Events.list(HOST_ID, options);
     } catch (e) {
-      if (e.message === 'Sync token is no longer valid, a full sync is required.') {
+      if (e.message.includes('Sync token is no longer valid, a full sync is required.')) {
         fullSync();
         return;
       } else {
